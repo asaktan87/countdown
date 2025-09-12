@@ -5,63 +5,358 @@
   <title>Countdown</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root { --bg:#f6f7fb; --fg:#222; --muted:#666; --card:#fff; }
-    * { box-sizing:border-box; }
-    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); }
-    .timer-card { background:var(--card); padding:28px 36px; border-radius:18px;
-      box-shadow:0 10px 25px rgba(0,0,0,.08); text-align:center; max-width:560px; width:100%; }
-    .timer-title{ margin:0 0 10px; font-size:22px; color:var(--fg) }
-    .grid{ display:flex; gap:14px; justify-content:center; margin-top:4px; flex-wrap:wrap; }
-    .cell{ min-width:96px; background:#fafafa; border:1px solid #eee; border-radius:14px; padding:14px 12px; }
-    .num{ font-size:34px; font-weight:600; display:block; font-variant-numeric:tabular-nums; }
-    .label{ font-size:12px; color:#555; text-transform:uppercase; letter-spacing:.08em }
-    .legend{ margin-top:10px; color:var(--muted); font-size:13px }
+    :root {
+      --accent: #0ea5e9; /* fallback accent */
+      --glass-bg: rgba(255,255,255,0.14);
+      --glass-brd: rgba(255,255,255,0.35);
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.8);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: #0c1222;
+      display: grid; place-items: center;
+      overflow: hidden;
+    }
+
+    /* Background image with gradient overlay */
+    .bg {
+      position: fixed; inset: 0; z-index: -2;
+      background: radial-gradient(1200px 800px at 70% -10%, #1f2a44 0%, #0c1222 60%, #05080f 100%);
+    }
+    .bg::after {
+      content: "";
+      position: absolute; inset: 0; z-index: -1;
+      background-size: cover; background-position: center; background-repeat: no-repeat;
+      opacity: 0.25; filter: saturate(1.1) contrast(1.05);
+    }
+
+    /* Subtle animated particles */
+    .stars { position: fixed; inset: 0; pointer-events: none; z-index: -1; }
+    .star {
+      position: absolute; width: 2px; height: 2px; background: rgba(255,255,255,.8); border-radius: 50%;
+      animation: drift linear infinite;
+      opacity: .6;
+    }
+    @keyframes drift {
+      from { transform: translateY(-10vh); opacity: .0; }
+      10%  { opacity: .6; }
+      to   { transform: translateY(110vh); opacity: 0; }
+    }
+
+    /* Layout */
+    .wrap { width: min(1100px, 92vw); padding: 28px; }
+    .header {
+      display: flex; align-items: center; gap: 16px; margin-bottom: 16px;
+    }
+    .logo {
+      width: 44px; height: 44px; border-radius: 10px; object-fit: contain; background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.2);
+    }
+    .titles { flex: 1; }
+    .title {
+      margin: 0; font-weight: 700; letter-spacing: .2px; font-size: clamp(22px, 3.5vw, 36px);
+      text-shadow: 0 2px 24px rgba(0,0,0,.65);
+    }
+    .subtitle { margin: 2px 0 0; color: var(--muted); font-size: clamp(12px, 2vw, 14px); }
+
+    .card {
+      position: relative;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      backdrop-filter: blur(14px) saturate(1.2);
+      -webkit-backdrop-filter: blur(14px) saturate(1.2);
+      border-radius: 20px;
+      padding: clamp(18px, 3vw, 28px);
+      box-shadow:
+        0 10px 30px rgba(0,0,0,.35),
+        inset 0 1px 0 rgba(255,255,255,.08);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: clamp(10px, 2.5vw, 18px);
+    }
+
+    .unit {
+      position: relative;
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 16px;
+      padding: clamp(12px, 2vw, 16px);
+      text-align: center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+    }
+
+    .num {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      font-size: clamp(32px, 6vw, 56px);
+      line-height: 1;
+      text-shadow: 0 2px 18px rgba(0,0,0,.6);
+      display: block;
+      transform: translateZ(0);
+      transition: transform .35s cubic-bezier(.2,.8,.2,1);
+    }
+
+    .label {
+      margin-top: 6px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Tick animation effect */
+    .tick { animation: pop .45s cubic-bezier(.2,.8,.2,1); }
+    @keyframes pop {
+      0% { transform: scale(0.98); filter: brightness(1.0); }
+      60% { transform: scale(1.06); filter: brightness(1.15); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+
+    /* Accent pill */
+    .accent {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: color-mix(in oklab, var(--accent) 60%, white 0%);
+      color: #051018;
+      font-weight: 600;
+      font-size: 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 8px 20px rgba(0,0,0,.25);
+    }
+
+    /* Footer text */
+    .foot {
+      margin-top: 14px; color: var(--muted); font-size: 12px; text-align: center;
+    }
+
+    /* Confetti canvas */
+    canvas#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+    @media (max-width: 640px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
-  <!-- Configure here -->
-  <div id="timer" data-title="weEngage Survey" data-deadline="2025-11-2 23:59:59"></div>
+  <div class="bg" id="bg"></div>
+  <canvas id="confetti"></canvas>
+  <!-- simple star particles -->
+  <div class="stars" id="stars"></div>
+
+  <!-- ============== CONFIG (edit attributes) ============== -->
+  <div class="wrap"
+       id="timer"
+       data-title="Product Launch"
+       data-subtitle="We go live company-wide"
+       data-deadline="2025-12-31 23:59:59"
+       data-bg="bg.jpg"            <!-- upload an image named bg.jpg to your repo -->
+       data-logo="logo.png"        <!-- optional: upload logo.png -->
+       data-accent="#00A389">      <!-- your brand color -->
+    <!-- content is built by JS -->
+  </div>
+  <!-- ====================================================== -->
 
   <script>
   (function () {
-    function parseLocal(str){ if(!str) return null;
-      const [d,t="00:00:00"]=str.trim().split(/\s+/);
-      const [y,m,day]=(d||"").split("-").map(Number);
-      const [hh=0,mm=0,ss=0]=(t||"").split(":").map(Number);
-      if(!y||!m||!day) return null; return new Date(y,m-1,day,hh,mm,ss,0);}
-    function pad(n){return String(n).padStart(2,"0");}
-    function buildUI(root,title){
-      const card=document.createElement("div");card.className="timer-card";
-      const h=document.createElement("h1");h.className="timer-title";h.textContent=title||"Countdown";
-      const grid=document.createElement("div");grid.className="grid";
-      const units=["Days","Hours","Minutes","Seconds"];
-      const cells=units.map(u=>{const c=document.createElement("div");c.className="cell";
-        const num=document.createElement("span");num.className="num";num.textContent="00";
-        const lab=document.createElement("span");lab.className="label";lab.textContent=u;
-        c.appendChild(num);c.appendChild(lab);grid.appendChild(c);return num;});
-      const legend=document.createElement("div");legend.className="legend";legend.textContent="Live countdown (local time)";
-      card.appendChild(h);card.appendChild(grid);card.appendChild(legend);root.appendChild(card);
-      return {cells,legend};
+    /* ---------- Utilities ---------- */
+    const root = document.getElementById("timer");
+    const bg = document.getElementById("bg");
+    const stars = document.getElementById("stars");
+    const confettiCanvas = document.getElementById("confetti");
+    const cfx = confettiCanvas.getContext("2d");
+
+    const data = {
+      title: root.getAttribute("data-title") || "Countdown",
+      subtitle: root.getAttribute("data-subtitle") || "",
+      deadline: root.getAttribute("data-deadline") || "",
+      bg: root.getAttribute("data-bg") || "",
+      logo: root.getAttribute("data-logo") || "",
+      accent: root.getAttribute("data-accent") || "#0ea5e9"
+    };
+    document.documentElement.style.setProperty("--accent", data.accent);
+
+    // Set background image if provided
+    if (data.bg) bg.style.setProperty("--bg-image", `url('${data.bg}')`);
+    bg.style.setProperty("position", "fixed");
+    bg.style.setProperty("inset", "0");
+    bg.style.setProperty("z-index", "-2");
+    bg.style.setProperty("pointer-events", "none");
+    bg.style.setProperty("--img", data.bg);
+    bg.style.setProperty("background", "none");
+    bg.style.setProperty("contain", "paint");
+
+    // Apply image through ::after for nicer overlay
+    bg.style.setProperty("--after", data.bg);
+    bg.style.setProperty("--opacity", "0.25");
+    bg.style.setProperty("--filter", "saturate(1.1) contrast(1.05)");
+    bg.style.setProperty("--pos", "center");
+
+    // Assign actual style to pseudo via stylesheet injection
+    const style = document.createElement("style");
+    style.textContent = `.bg::after{background-image:url('${data.bg || ""}');}`;
+    document.head.appendChild(style);
+
+    // Make some little stars
+    for (let i=0;i<40;i++){
+      const s = document.createElement("div");
+      s.className = "star";
+      s.style.left = Math.random()*100 + "vw";
+      s.style.top = (Math.random()*100 - 20) + "vh";
+      s.style.animationDuration = (6 + Math.random()*10) + "s";
+      s.style.animationDelay = (-Math.random()*10) + "s";
+      stars.appendChild(s);
     }
-    const root=document.getElementById("timer"); if(!root) return;
-    const title=root.getAttribute("data-title")||"Countdown";
-    const deadlineStr=root.getAttribute("data-deadline")||"";
-    const end=parseLocal(deadlineStr);
-    const {cells,legend}=buildUI(root,title);
-    if(!end||isNaN(end)){ cells.forEach((c,i)=>{c.textContent=i===0?"ERR":"--"}); legend.textContent="⚠️ Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS"; return;}
-    function tick(){
-      const diff=end.getTime()-Date.now();
-      if(diff<=0){ cells.forEach(c=>c.textContent="00"); legend.textContent="🎉 Time’s up!"; clearInterval(iv); return;}
-      const d=Math.floor(diff/86400000);
-      const h=Math.floor((diff%86400000)/3600000);
-      const m=Math.floor((diff%3600000)/60000);
-      const s=Math.floor((diff%60000)/1000);
-      cells[0].textContent=String(d); cells[1].textContent=pad(h); cells[2].textContent=pad(m); cells[3].textContent=pad(s);
+
+    // Parse local datetime
+    function parseLocal(str) {
+      if (!str) return null;
+      const [datePart, timePart="00:00:00"] = str.trim().split(/\s+/);
+      const [y,m,d] = (datePart||"").split("-").map(Number);
+      const [hh=0,mm=0,ss=0] = (timePart||"").split(":").map(Number);
+      if (!y||!m||!d) return null;
+      return new Date(y, m-1, d, hh, mm, ss, 0);
     }
-    tick(); const iv=setInterval(tick,1000);
+    const end = parseLocal(data.deadline);
+
+    /* ---------- Build UI ---------- */
+    const header = document.createElement("div");
+    header.className = "header";
+
+    if (data.logo) {
+      const img = document.createElement("img");
+      img.className = "logo";
+      img.src = data.logo; img.alt = "Logo";
+      header.appendChild(img);
+    }
+
+    const titles = document.createElement("div");
+    titles.className = "titles";
+    const pill = document.createElement("span");
+    pill.className = "accent";
+    pill.textContent = "Upcoming";
+    const h = document.createElement("h1");
+    h.className = "title"; h.textContent = data.title;
+    const sub = document.createElement("div");
+    sub.className = "subtitle"; sub.textContent = data.subtitle || "Live countdown (local time)";
+    titles.appendChild(pill); titles.appendChild(h); titles.appendChild(sub);
+    header.appendChild(titles);
+
+    const card = document.createElement("div");
+    card.className = "card";
+    const grid = document.createElement("div");
+    grid.className = "grid";
+
+    const units = ["Days","Hours","Minutes","Seconds"];
+    const nums = units.map(u => {
+      const unit = document.createElement("div"); unit.className = "unit";
+      const num = document.createElement("span"); num.className = "num"; num.textContent = "00";
+      const lab = document.createElement("div"); lab.className = "label"; lab.textContent = u;
+      unit.appendChild(num); unit.appendChild(lab); grid.appendChild(unit);
+      return num;
+    });
+
+    const foot = document.createElement("div");
+    foot.className = "foot";
+    foot.textContent = end && !isNaN(end) ? "" : "⚠️ Invalid date. Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS";
+
+    card.appendChild(grid);
+    root.innerHTML = "";
+    root.appendChild(header);
+    root.appendChild(card);
+    root.appendChild(foot);
+
+    /* ---------- Ticker ---------- */
+    if (!end || isNaN(end)) return;
+
+    function pad(n){ return String(n).padStart(2,"0"); }
+
+    function render(diff) {
+      const d = Math.floor(diff/86400000);
+      const h = Math.floor((diff%86400000)/3600000);
+      const m = Math.floor((diff%3600000)/60000);
+      const s = Math.floor((diff%60000)/1000);
+
+      const vals = [String(d), pad(h), pad(m), pad(s)];
+      vals.forEach((v,i) => {
+        if (nums[i].textContent !== v) {
+          nums[i].textContent = v;
+          nums[i].classList.remove("tick");
+          void nums[i].offsetWidth; // restart animation
+          nums[i].classList.add("tick");
+        }
+      });
+    }
+
+    let rafId, last;
+    function tick() {
+      const diff = end.getTime() - Date.now();
+      if (diff <= 0) {
+        render(0);
+        celebrate();
+        cancelAnimationFrame(rafId);
+        foot.textContent = "🎉 Time’s up!";
+        pill.textContent = "Live";
+        return;
+      }
+      if (!last || Date.now() - last >= 250) { // throttle to ~4fps updates; display still shows seconds accurately
+        render(diff);
+        last = Date.now();
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+    tick();
+
+    /* ---------- Confetti (tiny, dependency-free) ---------- */
+    let confettiRunning = false;
+    function celebrate() {
+      if (confettiRunning) return;
+      confettiRunning = true;
+
+      const W = confettiCanvas.width = window.innerWidth;
+      const H = confettiCanvas.height = window.innerHeight;
+      const pieces = Array.from({length: 180}).map(() => ({
+        x: Math.random()*W,
+        y: -Math.random()*H*0.5,
+        r: 4 + Math.random()*6,
+        c: Math.random(),
+        s: 2 + Math.random()*3,
+        a: Math.random()*Math.PI*2,
+        hue: Math.floor(Math.random()*360)
+      }));
+
+      let t0 = performance.now();
+      function draw(now){
+        const dt = (now - t0)/16.6; t0 = now;
+        cfx.clearRect(0,0,W,H);
+        pieces.forEach(p => {
+          p.y += p.s*dt;
+          p.x += Math.cos(p.a + now/400)*dt;
+          cfx.fillStyle = `hsl(${p.hue}, 85%, 60%)`;
+          cfx.beginPath();
+          cfx.ellipse(p.x, p.y, p.r, p.r*0.6, p.a, 0, Math.PI*2);
+          cfx.fill();
+        });
+        if (pieces.some(p => p.y < H + 20)) requestAnimationFrame(draw);
+        else setTimeout(()=>{ cfx.clearRect(0,0,W,H); }, 300);
+      }
+      requestAnimationFrame(draw);
+    }
+
+    // Resize canvas on viewport change
+    addEventListener("resize", () => {
+      confettiCanvas.width = innerWidth;
+      confettiCanvas.height = innerHeight;
+    });
+
   })();
   </script>
 </body>
 </html>
-
