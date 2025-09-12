@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Countdown</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --bg:#f6f7fb; --fg:#222; --muted:#666; --card:#fff; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); }
+    .timer-card { background:var(--card); padding:28px 36px; border-radius:18px;
+      box-shadow:0 10px 25px rgba(0,0,0,.08); text-align:center; max-width:560px; width:100%; }
+    .timer-title{ margin:0 0 10px; font-size:22px; color:var(--fg) }
+    .grid{ display:flex; gap:14px; justify-content:center; margin-top:4px; flex-wrap:wrap; }
+    .cell{ min-width:96px; background:#fafafa; border:1px solid #eee; border-radius:14px; padding:14px 12px; }
+    .num{ font-size:34px; font-weight:600; display:block; font-variant-numeric:tabular-nums; }
+    .label{ font-size:12px; color:#555; text-transform:uppercase; letter-spacing:.08em }
+    .legend{ margin-top:10px; color:var(--muted); font-size:13px }
+  </style>
+</head>
+<body>
+  <!-- Configure here -->
+  <div id="timer" data-title="Countdown to Launch" data-deadline="2025-12-31 23:59:59"></div>
+
+  <script>
+  (function () {
+    function parseLocal(str){ if(!str) return null;
+      const [d,t="00:00:00"]=str.trim().split(/\s+/);
+      const [y,m,day]=(d||"").split("-").map(Number);
+      const [hh=0,mm=0,ss=0]=(t||"").split(":").map(Number);
+      if(!y||!m||!day) return null; return new Date(y,m-1,day,hh,mm,ss,0);}
+    function pad(n){return String(n).padStart(2,"0");}
+    function buildUI(root,title){
+      const card=document.createElement("div");card.className="timer-card";
+      const h=document.createElement("h1");h.className="timer-title";h.textContent=title||"Countdown";
+      const grid=document.createElement("div");grid.className="grid";
+      const units=["Days","Hours","Minutes","Seconds"];
+      const cells=units.map(u=>{const c=document.createElement("div");c.className="cell";
+        const num=document.createElement("span");num.className="num";num.textContent="00";
+        const lab=document.createElement("span");lab.className="label";lab.textContent=u;
+        c.appendChild(num);c.appendChild(lab);grid.appendChild(c);return num;});
+      const legend=document.createElement("div");legend.className="legend";legend.textContent="Live countdown (local time)";
+      card.appendChild(h);card.appendChild(grid);card.appendChild(legend);root.appendChild(card);
+      return {cells,legend};
+    }
+    const root=document.getElementById("timer"); if(!root) return;
+    const title=root.getAttribute("data-title")||"Countdown";
+    const deadlineStr=root.getAttribute("data-deadline")||"";
+    const end=parseLocal(deadlineStr);
+    const {cells,legend}=buildUI(root,title);
+    if(!end||isNaN(end)){ cells.forEach((c,i)=>{c.textContent=i===0?"ERR":"--"}); legend.textContent="⚠️ Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS"; return;}
+    function tick(){
+      const diff=end.getTime()-Date.now();
+      if(diff<=0){ cells.forEach(c=>c.textContent="00"); legend.textContent="🎉 Time’s up!"; clearInterval(iv); return;}
+      const d=Math.floor(diff/86400000);
+      const h=Math.floor((diff%86400000)/3600000);
+      const m=Math.floor((diff%3600000)/60000);
+      const s=Math.floor((diff%60000)/1000);
+      cells[0].textContent=String(d); cells[1].textContent=pad(h); cells[2].textContent=pad(m); cells[3].textContent=pad(s);
+    }
+    tick(); const iv=setInterval(tick,1000);
+  })();
+  </script>
+</body>
+</html>
