@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -33,9 +33,10 @@
       animation: drift linear infinite; opacity: .6; }
     @keyframes drift { from { transform: translateY(-10vh); opacity: .0; } 10%{opacity:.6;} to{transform: translateY(110vh); opacity:0;} }
     .wrap { width: min(1100px, 92vw); padding: 28px; }
-    .header { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 16px; }
-    .logo { height: 60px; object-fit: contain; }
-    .titles { flex: 1; text-align: center; }
+    .header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+    .logo { width: 44px; height: 44px; border-radius: 10px; object-fit: contain; }
+    .titles { flex: 1; }
+    .title { margin: 0; font-weight: 700; font-size: clamp(22px,3.5vw,36px); }
     .subtitle { margin: 2px 0 0; color: var(--muted); font-size: clamp(12px,2vw,14px); }
     .card { background: var(--glass-bg); border: 1px solid var(--glass-brd);
       backdrop-filter: blur(14px) saturate(1.2); border-radius: 20px;
@@ -53,10 +54,10 @@
   <div class="bg" id="bg"></div>
   <div class="stars" id="stars"></div>
 
-  <!-- CONFIG: edit attributes below -->
+  <!-- CONFIG: edit the attributes below to suit your event -->
   <div class="wrap"
        id="timer"
-       data-title=""                      <!-- leave empty to hide text -->
+       data-title=""
        data-subtitle=""
        data-deadline="2025-11-02 23:59:59"
        data-bg="Straumann_Group_001.jpg"
@@ -69,9 +70,8 @@
     const root = document.getElementById("timer");
     const stars = document.getElementById("stars");
 
-    const titleAttr = root.getAttribute("data-title");
     const data = {
-      title: titleAttr === null ? "Countdown" : titleAttr, // only fallback if attribute missing
+      title: root.getAttribute("data-title") || "Countdown",
       subtitle: root.getAttribute("data-subtitle") || "",
       deadline: root.getAttribute("data-deadline") || "",
       bg: root.getAttribute("data-bg") || "",
@@ -80,12 +80,12 @@
     };
     document.documentElement.style.setProperty("--accent", data.accent);
 
-    // Background image
+    // Set optional background image via ::after
     const style = document.createElement("style");
-    style.textContent = `.bg::after{background-image:url('${encodeURI(data.bg) || ""}');}`;
+    style.textContent = `.bg::after{background-image:url('${data.bg || ""}');}`;
     document.head.appendChild(style);
 
-    // Stars
+    // Decorative stars
     for (let i=0;i<40;i++){
       const s=document.createElement("div"); s.className="star";
       s.style.left=Math.random()*100+"vw"; s.style.top=(Math.random()*100-20)+"vh";
@@ -93,7 +93,7 @@
       stars.appendChild(s);
     }
 
-    // Parse local date
+    // Parse "YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS" as local time
     function parseLocal(str){
       if (!str) return null;
       const [datePart, timePart="00:00:00"]=str.trim().split(/\s+/);
@@ -104,27 +104,27 @@
     }
     const end = parseLocal(data.deadline);
 
-    // Header
+    // Build header
     const header=document.createElement("div"); header.className="header";
     if (data.logo) {
       const img=document.createElement("img"); img.className="logo"; img.src=data.logo; img.alt="Logo";
       header.appendChild(img);
     }
-    if (data.title !== "") {
-      const h=document.createElement("h1"); h.className="title"; h.textContent=data.title;
-      header.appendChild(h);
-    }
+    const titles=document.createElement("div"); titles.className="titles";
+    const h=document.createElement("h1"); h.className="title"; h.textContent=data.title;
+    const sub=document.createElement("div"); sub.className="subtitle"; sub.textContent=data.subtitle;
+    titles.appendChild(h);
+    if (data.subtitle) titles.appendChild(sub);
+    header.appendChild(titles);
 
-    // Grid
+    // Build grid
     const card=document.createElement("div"); card.className="card";
     const grid=document.createElement("div"); grid.className="grid";
     const units=["Days","Hours","Minutes","Seconds"];
-    const nums=units.map(u=>{
-      const unit=document.createElement("div");unit.className="unit";
+    const nums=units.map(u=>{const unit=document.createElement("div");unit.className="unit";
       const num=document.createElement("span"); num.className="num"; num.textContent="00";
       const lab=document.createElement("div"); lab.className="label"; lab.textContent=u;
-      unit.appendChild(num);unit.appendChild(lab);grid.appendChild(unit);return num;
-    });
+      unit.appendChild(num);unit.appendChild(lab);grid.appendChild(unit);return num;});
     card.appendChild(grid);
 
     const foot=document.createElement("div"); foot.className="foot";
@@ -149,5 +149,9 @@
     tick();
   })();
   </script>
+
+  <noscript>
+    <div class="wrap"><div class="card"><p class="foot">JavaScript is required to display the countdown.</p></div></div>
+  </noscript>
 </body>
 </html>
