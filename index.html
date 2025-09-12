@@ -26,4 +26,132 @@
     .bg::after {
       content: ""; position: absolute; inset: 0; z-index: -1;
       background-size: cover; background-position: center; background-repeat: no-repeat;
-      opacity: 0.25; filter: saturate(1.1) contrast(1
+      opacity: 0.25; filter: saturate(1.1) contrast(1.05);
+    }
+    .stars { position: fixed; inset: 0; pointer-events: none; z-index: -1; }
+    .star { position: absolute; width: 2px; height: 2px; background: rgba(255,255,255,.8); border-radius: 50%;
+      animation: drift linear infinite; opacity: .6; }
+    @keyframes drift { from { transform: translateY(-10vh); opacity: .0; } 10%{opacity:.6;} to{transform: translateY(110vh); opacity:0;} }
+    .wrap { width: min(1100px, 92vw); padding: 28px; }
+    .header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+    .logo { width: 44px; height: 44px; border-radius: 10px; object-fit: contain; }
+    .titles { flex: 1; }
+    .title { margin: 0; font-weight: 700; font-size: clamp(22px,3.5vw,36px); }
+    .subtitle { margin: 2px 0 0; color: var(--muted); font-size: clamp(12px,2vw,14px); }
+    .card { background: var(--glass-bg); border: 1px solid var(--glass-brd);
+      backdrop-filter: blur(14px) saturate(1.2); border-radius: 20px;
+      padding: clamp(18px,3vw,28px); box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(120px,1fr)); gap: clamp(10px,2.5vw,18px); }
+    .unit { background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+      border: 1px solid rgba(255,255,255,.28); border-radius: 16px; padding: clamp(12px,2vw,16px); text-align:center; }
+    .num { font-variant-numeric: tabular-nums; font-weight:700; font-size:clamp(32px,6vw,56px); line-height:1; display:block; }
+    .label { margin-top: 6px; letter-spacing:.18em; text-transform:uppercase; font-size:12px; color: var(--muted); }
+    .foot { margin-top: 14px; color: var(--muted); font-size: 12px; text-align: center; }
+    @media (max-width:640px){.grid{grid-template-columns:repeat(2,1fr);} }
+  </style>
+</head>
+<body>
+  <div class="bg" id="bg"></div>
+  <div class="stars" id="stars"></div>
+
+  <!-- CONFIG: edit the attributes below to suit your event -->
+  <div class="wrap"
+       id="timer"
+       data-title="Product Launch"
+       data-subtitle="weEngage Survey"
+       data-deadline="2025-12-31 23:59:59"
+       data-bg="bg.jpg"
+       data-logo="logo.png"
+       data-accent="#00A389">
+  </div>
+
+  <script>
+  (function () {
+    const root = document.getElementById("timer");
+    const stars = document.getElementById("stars");
+
+    const data = {
+      title: root.getAttribute("data-title") || "Countdown",
+      subtitle: root.getAttribute("data-subtitle") || "",
+      deadline: root.getAttribute("data-deadline") || "",
+      bg: root.getAttribute("data-bg") || "",
+      logo: root.getAttribute("data-logo") || "",
+      accent: root.getAttribute("data-accent") || "#0ea5e9"
+    };
+    document.documentElement.style.setProperty("--accent", data.accent);
+
+    // Set optional background image via ::after
+    const style = document.createElement("style");
+    style.textContent = `.bg::after{background-image:url('${data.bg || ""}');}`;
+    document.head.appendChild(style);
+
+    // Decorative stars
+    for (let i=0;i<40;i++){
+      const s=document.createElement("div"); s.className="star";
+      s.style.left=Math.random()*100+"vw"; s.style.top=(Math.random()*100-20)+"vh";
+      s.style.animationDuration=(6+Math.random()*10)+"s"; s.style.animationDelay=(-Math.random()*10)+"s";
+      stars.appendChild(s);
+    }
+
+    // Parse "YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS" as local time
+    function parseLocal(str){
+      if (!str) return null;
+      const [datePart, timePart="00:00:00"]=str.trim().split(/\s+/);
+      const [y,m,d]=(datePart||"").split("-").map(Number);
+      const [hh=0,mm=0,ss=0]=(timePart||"").split(":").map(Number);
+      if (!y||!m||!d) return null;
+      return new Date(y,m-1,d,hh,mm,ss,0);
+    }
+    const end = parseLocal(data.deadline);
+
+    // Build header
+    const header=document.createElement("div"); header.className="header";
+    if (data.logo) {
+      const img=document.createElement("img"); img.className="logo"; img.src=data.logo; img.alt="Logo";
+      header.appendChild(img);
+    }
+    const titles=document.createElement("div"); titles.className="titles";
+    const h=document.createElement("h1"); h.className="title"; h.textContent=data.title;
+    const sub=document.createElement("div"); sub.className="subtitle"; sub.textContent=data.subtitle;
+    titles.appendChild(h);
+    if (data.subtitle) titles.appendChild(sub);
+    header.appendChild(titles);
+
+    // Build grid
+    const card=document.createElement("div"); card.className="card";
+    const grid=document.createElement("div"); grid.className="grid";
+    const units=["Days","Hours","Minutes","Seconds"];
+    const nums=units.map(u=>{const unit=document.createElement("div");unit.className="unit";
+      const num=document.createElement("span"); num.className="num"; num.textContent="00";
+      const lab=document.createElement("div"); lab.className="label"; lab.textContent=u;
+      unit.appendChild(num);unit.appendChild(lab);grid.appendChild(unit);return num;});
+    card.appendChild(grid);
+
+    const foot=document.createElement("div"); foot.className="foot";
+    root.innerHTML=""; root.appendChild(header); root.appendChild(card); root.appendChild(foot);
+
+    if (!end||isNaN(end)){foot.textContent="⚠️ Invalid date (use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)"; return;}
+
+    function pad(n){return String(n).padStart(2,"0");}
+    function render(diff){
+      const d=Math.floor(diff/86400000);
+      const h=Math.floor((diff%86400000)/3600000);
+      const m=Math.floor((diff%3600000)/60000);
+      const s=Math.floor((diff%60000)/1000);
+      const vals=[String(d),pad(h),pad(m),pad(s)];
+      vals.forEach((v,i)=>{nums[i].textContent=v;});
+    }
+    function tick(){
+      const diff=end.getTime()-Date.now();
+      if(diff<=0){render(0); foot.textContent="🎉 Time’s up!"; return;}
+      render(diff); requestAnimationFrame(tick);
+    }
+    tick();
+  })();
+  </script>
+
+  <noscript>
+    <div class="wrap"><div class="card"><p class="foot">JavaScript is required to display the countdown.</p></div></div>
+  </noscript>
+</body>
+</html>
